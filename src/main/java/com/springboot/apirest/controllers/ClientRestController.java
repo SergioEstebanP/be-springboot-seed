@@ -4,13 +4,18 @@ import com.springboot.apirest.models.entity.Client;
 import com.springboot.apirest.models.services.IClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @CrossOrigin(origins = {"http://localhost:4200"})
 @RestController
@@ -24,6 +29,12 @@ public class ClientRestController {
     @GetMapping("/clients")
     public List<Client> index() {
         return clientService.findAll();
+    }
+
+    // GET ALL WITH PAGINATION
+    @GetMapping("/clients/page/{page}")
+    public Page<Client> index(@PathVariable Integer page) {
+        return clientService.findAll(PageRequest.of(page, 10));
     }
 
     // GET by ID
@@ -49,9 +60,29 @@ public class ClientRestController {
     // POST
     @PostMapping("/clients")
     // @ResponseStatus(HttpStatus.CREATED) // default is 200, changed to 201
-    public ResponseEntity<?> create(@RequestBody Client client) {
+    public ResponseEntity<?> create(@Valid @RequestBody Client client, BindingResult result) {
         Client newClient;
         Map<String, Object> response = new HashMap<>();
+
+        // Validation at data format level
+        if (result.hasErrors()) {
+
+//            List<String> errors = new ArrayList<>();
+//            for(FieldError err: result.getFieldErrors()) {
+//                errors.add("Field: " + err.getField() +  " " + err.getDefaultMessage());
+//            }
+
+            List<String> errors = result.getFieldErrors()
+                    .stream()
+                    .map(fieldError -> {
+                        return "Field: " + fieldError.getField() + " " + fieldError.getDefaultMessage();
+                    })
+                    .collect(Collectors.toList());
+
+            response.put("errors", errors);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        // validation at backend level
         try {
             newClient = clientService.save(client);
         } catch (DataAccessException exception) {
@@ -66,17 +97,34 @@ public class ClientRestController {
 
     // DELETE by ID HARD DELETE -- removes from DB
     @DeleteMapping("/clients/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        clientService.delete(id);
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            clientService.delete(id);
+        } catch (DataAccessException exception) {
+            response.put("message", "Error deleting the client " + id);
+            response.put("exception", exception.toString());
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
     }
 
     // PUT by ID
     @PutMapping("/clients/{id}")
-    public ResponseEntity<?> update(@RequestBody Client client, @PathVariable Long id) {
+    public ResponseEntity<?> update(@Valid @RequestBody Client client, BindingResult result, @PathVariable Long id) {
         Client currentClient;
         Client updatedClient;
         Map<String, Object> response = new HashMap<>();
+
+        if (result.hasErrors()) {
+            List<String> errors = result.getFieldErrors()
+                    .stream()
+                    .map(fieldError -> "Field: " + fieldError.getField() + " " + fieldError.getDefaultMessage())
+                    .collect(Collectors.toList());
+            response.put("errors", errors);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+
         try {
             currentClient = clientService.findById(id);
         } catch (DataAccessException exception) {

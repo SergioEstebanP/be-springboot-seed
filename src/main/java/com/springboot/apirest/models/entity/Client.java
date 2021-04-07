@@ -1,6 +1,9 @@
 package com.springboot.apirest.models.entity;
 
 import javax.persistence.*;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -12,12 +15,17 @@ public class Client implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @NotEmpty(message = "Couldn't be empty")
+    @Size(min=4, max=30)
     @Column(nullable = false)
     private String name;
 
+    @NotEmpty
     @Column(nullable = false)
     private String surname;
 
+    @NotEmpty
+    @Email
     @Column(nullable = false, unique = true)
     private String email;
 
