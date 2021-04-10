@@ -1,17 +1,26 @@
 package com.springboot.apirest.controllers;
 
 import com.springboot.apirest.models.entity.Client;
+import com.springboot.apirest.models.entity.Region;
 import com.springboot.apirest.models.services.IClientService;
+import com.springboot.apirest.models.services.IFileService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,8 +31,13 @@ import java.util.stream.Collectors;
 @RequestMapping("/api")
 public class ClientRestController {
 
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     @Autowired
     private IClientService clientService;
+
+    @Autowired
+    private IFileService fileService;
 
     // GET ALL
     @GetMapping("/clients")
@@ -67,11 +81,6 @@ public class ClientRestController {
         // Validation at data format level
         if (result.hasErrors()) {
 
-//            List<String> errors = new ArrayList<>();
-//            for(FieldError err: result.getFieldErrors()) {
-//                errors.add("Field: " + err.getField() +  " " + err.getDefaultMessage());
-//            }
-
             List<String> errors = result.getFieldErrors()
                     .stream()
                     .map(fieldError -> {
@@ -100,6 +109,11 @@ public class ClientRestController {
     public ResponseEntity<?> delete(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // we also have to delete all the data from the client, as the picture
+            Client client = clientService.findById(id);
+            String oldFileName = client.getPicture();
+            fileService.delete(oldFileName);
+            // then we delete the client
             clientService.delete(id);
         } catch (DataAccessException exception) {
             response.put("message", "Error deleting the client " + id);
@@ -116,6 +130,7 @@ public class ClientRestController {
         Client updatedClient;
         Map<String, Object> response = new HashMap<>();
 
+        // validation at data level bad requests, we can avoid some of this validation if we can do it in FE
         if (result.hasErrors()) {
             List<String> errors = result.getFieldErrors()
                     .stream()
@@ -125,6 +140,7 @@ public class ClientRestController {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
 
+        // validation for get the user in DB
         try {
             currentClient = clientService.findById(id);
         } catch (DataAccessException exception) {
@@ -135,6 +151,8 @@ public class ClientRestController {
         currentClient.setName(client.getName());
         currentClient.setSurname(client.getSurname());
         currentClient.setEmail(client.getEmail());
+        currentClient.setNextView(client.getNextView());
+        currentClient.setRegion(client.getRegion());
 
         try {
             updatedClient = clientService.save(currentClient);
@@ -149,4 +167,48 @@ public class ClientRestController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/clients/upload")
+    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file, @RequestParam("id") Long id) {
+        Map<String, Object> response = new HashMap<>();
+        Client client = clientService.findById(id);
+        String fileName = "";
+        if (!file.isEmpty()) {
+            try {
+                fileName = fileService.copy(file);
+            } catch (IOException e) {
+                response.put("message", "Error uploading the image for client: " + id);
+                response.put("error", e.toString());
+            }
+            String oldFileName = client.getPicture();
+            fileService.delete(oldFileName);
+
+            client.setPicture(fileName);
+            clientService.save(client);
+            response.put("client", client);
+            response.put("message", "Picture uploaded successfully");
+        } else {
+            response.put("message", "Error uploading the image");
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/img/{filename:.+}")
+    public ResponseEntity<Resource> getPicture(@PathVariable String filename) {
+        Resource resource = null;
+        try {
+            resource = fileService.load(filename);
+        } catch (MalformedURLException e) {
+            LoggerFactory.getLogger(this.getClass()).error(e.toString());
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"");
+        return new ResponseEntity<>(resource, headers, HttpStatus.OK);
+    }
+
+
+    @GetMapping("/clients/regions")
+    public List<Region> getRegions() {
+        return clientService.findAllRegions();
+    }
 }

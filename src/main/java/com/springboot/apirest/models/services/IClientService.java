@@ -3,6 +3,7 @@ package com.springboot.apirest.models.services;
 import java.util.List;
 
 import com.springboot.apirest.models.entity.Client;
+import com.springboot.apirest.models.entity.Region;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,4 +14,5 @@ public interface IClientService {
   Client save(Client client);
   Client findById(Long id);
   void delete(Long id);
+  List<Region> findAllRegions();
 }

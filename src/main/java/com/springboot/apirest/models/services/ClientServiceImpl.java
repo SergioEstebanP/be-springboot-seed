@@ -2,6 +2,7 @@ package com.springboot.apirest.models.services;
 
 import com.springboot.apirest.models.dao.IClientDao;
 import com.springboot.apirest.models.entity.Client;
+import com.springboot.apirest.models.entity.Region;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +47,12 @@ public class ClientServiceImpl implements IClientService {
         // return and optional, we can handle some parameters like is present or so on
         // .get - .getOrElse etc
         return clientDao.findById(id).orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Region> findAllRegions() {
+        return clientDao.findAllRegions();
     }
 
 }
