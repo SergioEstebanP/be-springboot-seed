@@ -65,3 +65,16 @@ insert into clients (region_id, name, surname, email, created_at) values (6, 'Ce
 insert into clients (region_id, name, surname, email, created_at) values (6, 'Crissy', 'Erdely', 'cerdely1b@senate.gov', '2020-08-24');
 insert into clients (region_id, name, surname, email, created_at) values (6, 'Yolanda', 'Byrth', 'ybyrth1c@nymag.com', '2021-01-28');
 insert into clients (region_id, name, surname, email, created_at) values (6, 'Avivah', 'Vertey', 'avertey1d@paypal.com', '2020-05-14');
+
+insert into users (username, password, enabled) values ('sergio', '$2a$10$suCysdcKQC2vj8UkvVblSuI6IPC.dl2aCcmAiOBOZdxUxjbT4rl3O', 1);
+insert into users (username, password, enabled) values ('fernando', '$2a$10$8bFSwdMpEdrCNA6OFtjF3uVzvwZiykdM1J7w9lFGaAQeZcFrkUVvy', 1);
+insert into users (username, password, enabled) values ('javier', '$2a$10$55Tp6xddGx.EgyJdY9ZISugQw8Ii6F7.1qhoydPEmELBR/wDl2YqW', 1);
+
+insert into roles (name) values ('ROLE_USER');
+insert into roles (name) values ('ROLE_ADMIN');
+
+insert into users_roles (user_id, role_id) values (1,2);
+insert into users_roles (user_id, role_id) values (2,1);
+insert into users_roles (user_id, role_id) values (3,1);
+
+
