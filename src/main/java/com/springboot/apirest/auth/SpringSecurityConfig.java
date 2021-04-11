@@ -42,6 +42,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         // here we select the rules for each endpoint and its security
         // its a white list
         http
+                .cors()
+                .and()
                 .authorizeRequests()
                 .anyRequest().authenticated()
                 .and().csrf().disable()
